@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# != 0)); then
+    printf 'usage: %s\n' "$0" >&2
+    exit 64
+fi
+
+pilot_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+pilot_log=$(mktemp "${TMPDIR:-/tmp}/buildopt-pilot.XXXXXX.log")
+pilot_cleanup() {
+    rm -f -- "${pilot_log}"
+}
+trap pilot_cleanup EXIT
+
+for pilot_command in awk find git grep java jq mktemp sha256sum tee unzip wc; do
+    if ! command -v "${pilot_command}" >/dev/null 2>&1; then
+        printf 'required pilot command is unavailable: %s\n'             "${pilot_command}" >&2
+        exit 1
+    fi
+done
+
+cd "${pilot_root}"
+pilot_before=$(git status --porcelain=v1 --untracked-files=all)
+
+jq -e '
+  .schemaVersion == "buildopt.pilot/v1" and
+  .profile == "PRIVATE_BETA_ISOLATED" and
+  .repository == "tonyredondo/buildopt-pilot" and
+  (.buildoptRevision | test("^[0-9a-f]{40}$")) and
+  .runner == {
+    "os": "linux",
+    "architecture": "amd64",
+    "class": "gradle-9.6-java-17-linux-amd64",
+    "jdk": 17,
+    "gradle": "9.6.1"
+  } and
+  .workload.projects == 8 and
+  .workload.mainClasses == 64 and
+  .workload.testClasses == 8 and
+  .workload.customTasks == ["generatePilotManifest"] and
+  (.deliverables | length) == 3 and
+  .githubBaselineContainsBuildOptCredentials == false and
+  .eightHourSoakRequiredForPoc == false
+' buildopt-pilot.json >/dev/null
+
+grep -Fq     'distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.1-bin.zip'     gradle/wrapper/gradle-wrapper.properties
+grep -Fq     'distributionSha256Sum=9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14'     gradle/wrapper/gradle-wrapper.properties
+
+if [[ $(find lib* app -path '*/src/main/java/*.java' -type f | wc -l) -ne 64 ]] ||
+    [[ $(find lib* app -path '*/src/test/java/*.java' -type f | wc -l) -ne 8 ]]; then
+    printf 'pilot source matrix is incomplete\n' >&2
+    exit 1
+fi
+
+./gradlew     --no-daemon     --stacktrace     --warning-mode=fail     clean     pilotBuild
+
+pilot_zip=app/build/distributions/app-1.0.0.zip
+pilot_jar=app/build/libs/app-1.0.0.jar
+pilot_manifest=build/pilot/manifest.txt
+for pilot_artifact in "${pilot_zip}" "${pilot_jar}" "${pilot_manifest}"; do
+    if [[ ! -s "${pilot_artifact}" ]]; then
+        printf 'pilot deliverable is absent or empty: %s\n'             "${pilot_artifact}" >&2
+        exit 1
+    fi
+done
+if [[ $(find lib* app -path '*/build/test-results/test/TEST-*.xml' -type f | wc -l) -ne 8 ]]; then
+    printf 'pilot did not execute all eight test classes\n' >&2
+    exit 1
+fi
+
+pilot_first_zip=$(sha256sum "${pilot_zip}" | awk '{print $1}')
+
+./gradlew     --no-daemon     --stacktrace     --warning-mode=fail     --console=plain     clean     pilotBuild | tee "${pilot_log}"
+
+pilot_second_zip=$(sha256sum "${pilot_zip}" | awk '{print $1}')
+if [[ "${pilot_first_zip}" != "${pilot_second_zip}" ]] ||
+    ! grep -Fq 'FROM-CACHE' "${pilot_log}"; then
+    printf 'pilot replay was not byte-identical and cache-backed\n' >&2
+    exit 1
+fi
+unzip -tqq "${pilot_zip}"
+
+pilot_after=$(git status --porcelain=v1 --untracked-files=all)
+if [[ "${pilot_before}" != "${pilot_after}" ]]; then
+    printf 'pilot check changed the working tree\n' >&2
+    git status --short >&2
+    exit 1
+fi
+
+printf 'BuildOpt pilot OK: 8 projects, 64 main classes, 8 tests, reproducible cached distribution\n'

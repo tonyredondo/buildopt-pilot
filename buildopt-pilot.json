@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "buildopt.pilot/v1",
+  "profile": "PRIVATE_BETA_ISOLATED",
+  "repository": "tonyredondo/buildopt-pilot",
+  "buildoptRevision": "5f4105a78dac26dd077ad886e8aa15549423c1fc",
+  "runner": {
+    "os": "linux",
+    "architecture": "amd64",
+    "class": "gradle-9.6-java-17-linux-amd64",
+    "jdk": 17,
+    "gradle": "9.6.1"
+  },
+  "workload": {
+    "command": ["./gradlew", "--no-daemon", "clean", "pilotBuild"],
+    "projects": 8,
+    "mainClasses": 64,
+    "testClasses": 8,
+    "customTasks": ["generatePilotManifest"]
+  },
+  "deliverables": [
+    "app/build/libs/app-1.0.0.jar",
+    "app/build/distributions/app-1.0.0.zip",
+    "build/pilot/manifest.txt"
+  ],
+  "githubBaselineContainsBuildOptCredentials": false,
+  "eightHourSoakRequiredForPoc": false
+}

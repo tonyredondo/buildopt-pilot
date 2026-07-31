@@ -14,14 +14,18 @@ import java.util.List;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
-import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.CacheableTask;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
+// BuildOpt CUSTOM_TASK_CONTRACT_JAVA_V1 source=sha256:392e0197d9143304d8ce3c1a598aa552d62e5f2cc200a5766c5d06e516ca5083
+@CacheableTask
 public abstract class GeneratePilotManifest extends DefaultTask {
-    @Internal
+    @Input
     public abstract ListProperty<String> getEntries();
 
-    @Internal
+    @OutputFile
     public abstract RegularFileProperty getOutputFile();
 
     @TaskAction

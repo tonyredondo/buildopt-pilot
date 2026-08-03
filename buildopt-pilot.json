@@ -2,7 +2,8 @@
   "schemaVersion": "buildopt.pilot/v1",
   "profile": "PRIVATE_BETA_ISOLATED",
   "repository": "tonyredondo/buildopt-pilot",
-  "buildoptRevision": "5f4105a78dac26dd077ad886e8aa15549423c1fc",
+  "buildoptRevision": "290f98e7600ddb03525098837cb720eedb453ee8",
+  "buildoptVersion": "0.1.1",
   "runner": {
     "os": "linux",
     "architecture": "amd64",

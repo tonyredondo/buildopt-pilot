@@ -28,6 +28,7 @@ jq -e '
   .profile == "PRIVATE_BETA_ISOLATED" and
   .repository == "tonyredondo/buildopt-pilot" and
   (.buildoptRevision | test("^[0-9a-f]{40}$")) and
+  .buildoptVersion == "0.1.1" and
   .runner == {
     "os": "linux",
     "architecture": "amd64",

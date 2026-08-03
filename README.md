@@ -32,6 +32,23 @@ Run the repository conformance check with:
 ./dev/check
 ```
 
+## Try the public BuildOpt onboarding
+
+Install the public release, then run the same workload through BuildOpt:
+
+```bash
+curl --fail --silent --show-error --location \
+  --output buildopt-install.sh \
+  https://raw.githubusercontent.com/tonyredondo/buildopt/main/install.sh
+bash buildopt-install.sh --version 0.1.1
+export PATH="$HOME/.local/bin:$PATH"
+buildopt doctor
+buildopt gradle --no-daemon clean pilotBuild
+```
+
+The GitHub workflow performs the equivalent clean-room test through the
+published BuildOpt Action and verifies all three deliverables.
+
 ## BuildOpt boundary
 
 [`buildopt-pilot.json`](./buildopt-pilot.json) pins the exact BuildOpt source

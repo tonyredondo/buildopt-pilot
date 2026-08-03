@@ -31,13 +31,16 @@ jobs:
       - name: Validate synthetic pilot
         run: ./dev/check
       - name: Install BuildOpt
-        uses: tonyredondo/buildopt@290f98e7600ddb03525098837cb720eedb453ee8
+        uses: tonyredondo/buildopt@7bde5bc720a21aea4379aacf5deedbb95d31e99b
         with:
-          version: 0.1.1
+          version: 0.2.0
       - name: Verify BuildOpt onboarding
         run: |
+          set -o pipefail
           buildopt doctor
           buildopt gradle --no-daemon --stacktrace --warning-mode=fail clean pilotBuild
+          buildopt gradle --no-daemon --stacktrace --warning-mode=fail clean pilotBuild | tee "$RUNNER_TEMP/buildopt-second-build.log"
+          grep -q "FROM-CACHE" "$RUNNER_TEMP/buildopt-second-build.log"
           test -s app/build/libs/app-1.0.0.jar
           test -s app/build/distributions/app-1.0.0.zip
           test -s build/pilot/manifest.txt
